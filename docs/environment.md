@@ -12,6 +12,8 @@
 - cron：10件まで、最短1分毎
 - `node`・`npm`・`composer`：SSH で使えるコマンドの公式の一覧に無い（`git` と `php` はある）
 - 出典と読んだ日は `docs/decisions.md` の「2-1 サーバーの選定」の項
+- 使う技術（決めた。コードはまだ無い）：Laravel 13、Inertia（v3）、React 19、TypeScript、Tailwind CSS 4、shadcn/ui。本番のデータベースは MySQL 8.4。外の AI の入口のログインは Sanctum のトークン
+- 使う技術の出典と理由は `docs/decisions.md` の「2-2 技術の選定」の項
 
 ## コードの構成
 
