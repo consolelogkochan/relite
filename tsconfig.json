@@ -19,6 +19,8 @@
         "resources/js/**/*.ts",
         "resources/js/**/*.tsx",
         "resources/js/**/*.d.ts",
+        "tests/js/**/*.ts",
+        "tests/js/**/*.tsx",
         "vite.config.ts",
         "vitest.config.ts"
     ],
