@@ -17,4 +17,12 @@
 
 ## コードの構成
 
-（まだ無い）
+中身の無いアプリ（2026-11-23、2-3）。Laravel 13 の空のアプリに、Inertia・React・TypeScript・Tailwind CSS・shadcn/ui を足した（スターターキットは使っていない）。
+
+- 画面のページ：`resources/js/pages/`（Inertia の画面。今は `Welcome.tsx` だけ）。入口は `resources/js/app.tsx`、外枠は `resources/views/app.blade.php`
+- 画面の部品：`resources/js/components/ui/`（shadcn/ui の部品。今はボタンだけ）、`resources/js/lib/`
+- 画面への入口：`routes/web.php`
+- テスト：サーバーの側は `tests/Feature/`（PHPUnit）、画面の側は `tests/js/`（Vitest と React Testing Library）
+- 手元で動かす環境：`compose.yaml`（Sail。PHP 8.5 と MySQL 8.4）。テストは MySQL の `testing` のデータベースで動く（`phpunit.xml`）
+- 設定のファイル：`vite.config.ts`（ビルド）、`vitest.config.ts`（画面の側のテスト）、`tsconfig.json`（型）、`eslint.config.js`・`.prettierrc`（書き方）、`phpstan.neon`（Larastan）、`components.json`（shadcn/ui）
+- 手元の開発でも、Inertia のサーバーの側で画面を描く機能（SSR）は止めている（`.env` の `INERTIA_SSR_ENABLED=false`）。本番で使わないため
