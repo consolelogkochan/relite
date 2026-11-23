@@ -19,7 +19,7 @@
 
 中身の無いアプリ（2026-11-23、2-3）。Laravel 13 の空のアプリに、Inertia・React・TypeScript・Tailwind CSS・shadcn/ui を足した（スターターキットは使っていない）。
 
-- 画面のページ：`resources/js/pages/`（Inertia の画面。今は `Welcome.tsx` だけ）。入口は `resources/js/app.tsx`、外枠は `resources/views/app.blade.php`
+- 画面のページ：`resources/js/pages/`（Inertia の画面。今は `Welcome.tsx` だけ）。ここにはページだけを置く（下のものは全部ページとして本番のビルドに入る。画面の側のテストは `tests/js/` に置く）。入口は `resources/js/app.tsx`、外枠は `resources/views/app.blade.php`
 - 画面の部品：`resources/js/components/ui/`（shadcn/ui の部品。今はボタンだけ）、`resources/js/lib/`
 - 画面への入口：`routes/web.php`
 - テスト：サーバーの側は `tests/Feature/`（PHPUnit）、画面の側は `tests/js/`（Vitest と React Testing Library）
