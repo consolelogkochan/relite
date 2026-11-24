@@ -1,0 +1,119 @@
+name: CI
+
+on:
+    push:
+        branches: [main]
+    pull_request:
+        branches: [main]
+
+jobs:
+    ci:
+        runs-on: ubuntu-latest
+        timeout-minutes: 15
+        permissions:
+            contents: read
+
+        # テストと「本番と同じ依存での確かめ」が使う MySQL。手元（Sail）と同じ 8.4。
+        # CI の中だけで使い捨てるので、root のパスワードは空にしている（秘密の値を置かない）。
+        services:
+            mysql:
+                image: mysql:8.4
+                env:
+                    MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+                    MYSQL_DATABASE: testing
+                ports:
+                    - 3306:3306
+                options: >-
+                    --health-cmd="mysqladmin ping -h 127.0.0.1"
+                    --health-interval=5s
+                    --health-timeout=5s
+                    --health-retries=20
+
+        # .env（.env.example の写し）より、ここの環境変数が優先される。
+        # phpunit.xml の DB_CONNECTION=mysql・DB_DATABASE=testing はそのまま使う。
+        env:
+            DB_HOST: 127.0.0.1
+            DB_PORT: 3306
+            DB_DATABASE: testing
+            DB_USERNAME: root
+            DB_PASSWORD: ''
+
+        steps:
+            - uses: actions/checkout@v7
+
+            - uses: shivammathur/setup-php@v2
+              with:
+                  php-version: '8.5'
+                  coverage: none
+
+            - uses: actions/setup-node@v7
+              with:
+                  node-version: '24'
+                  cache: npm
+
+            - run: composer install --prefer-dist --no-progress
+
+            - run: cp .env.example .env
+
+            - run: php artisan key:generate
+
+            - run: npm ci
+
+            # 検査
+            - run: npm run types:check
+
+            - run: npm run lint
+
+            - run: npm run format:check
+
+            - run: composer lint:check
+
+            - run: composer analyse
+
+            # 監査。本番に載る npm の部品は high 以上、開発の部品を含む全部は critical 以上で落とす
+            - run: composer audit
+
+            - run: npm audit --omit=dev --audit-level=high
+
+            - run: npm audit --audit-level=critical
+
+            # ビルド
+            - run: npm run build
+
+            # テスト。サーバーの側のテストはビルドに頼らない（tests/TestCase.php の withoutVite()）
+            - run: php artisan test
+
+            - run: npm test
+
+            # 本番と同じ依存（--no-dev）で動くかの確かめ。--no-dev は phpunit を消すので、テストの後に置く。
+            # セッションとキャッシュはデータベースに置く設定なので、表を作ってから起こす。
+            - run: composer install --no-dev --optimize-autoloader --no-progress
+
+            - run: php artisan migrate --force
+
+            - run: |
+                  php artisan serve --port=8000 > /tmp/serve.log 2>&1 &
+                  ready=""
+                  for _ in $(seq 1 30); do
+                    if curl -sf http://127.0.0.1:8000/up > /dev/null; then
+                      ready=1
+                      break
+                    fi
+                    sleep 1
+                  done
+                  if [ -z "$ready" ]; then
+                    echo "開発サーバーが30秒以内に応答しませんでした。" >&2
+                    cat /tmp/serve.log >&2
+                    exit 1
+                  fi
+                  status="$(curl -s -o /tmp/root.html -w '%{http_code}' http://127.0.0.1:8000/)"
+                  if [ "$status" != "200" ]; then
+                    echo "/ が ${status} を返しました。" >&2
+                    cat /tmp/serve.log >&2
+                    exit 1
+                  fi
+                  if ! grep -q '"component":"Welcome"' /tmp/root.html; then
+                    echo "/ の応答に Inertia の Welcome がありません。" >&2
+                    exit 1
+                  fi
+                  echo "/up と / は 200。/ に Welcome がある。"
