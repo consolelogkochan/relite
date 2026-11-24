@@ -81,6 +81,10 @@ jobs:
             - run: npm run build
 
             # テスト。サーバーの側のテストはビルドに頼らない（tests/TestCase.php の withoutVite()）
+            # テストが使う接続先を出す（接続の種類・データベースの名前・版。パスワードは出ない）。
+            # テストはこれに phpunit.xml の DB_CONNECTION=mysql・DB_DATABASE=testing を重ねる（同じ値）
+            - run: php artisan db:show
+
             - run: php artisan test
 
             - run: npm test
