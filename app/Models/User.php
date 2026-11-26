@@ -2,13 +2,13 @@
 
 namespace App\Models;
 
+use App\Support\RandomCode;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use RuntimeException;
 
 #[Fillable(['name', 'login_id', 'password'])]
 #[Hidden(['password', 'remember_token'])]
@@ -19,12 +19,6 @@ class User extends Authenticatable
 
     /** 共有ID の長さ */
     public const SHARE_ID_LENGTH = 12;
-
-    /** 共有ID に使う文字（小文字の英字と数字） */
-    private const SHARE_ID_ALPHABET = 'abcdefghijklmnopqrstuvwxyz0123456789';
-
-    /** 共有ID の重なりで作り直す回数の上限 */
-    private const SHARE_ID_MAX_ATTEMPTS = 10;
 
     /**
      * Get the attributes that should be cast.
@@ -69,22 +63,14 @@ class User extends Authenticatable
     }
 
     /**
-     * 小文字の英字と数字で、まだ使われていない共有ID を作る。
-     * 重なったら作り直し、上限の回数を超えたら例外にする
+     * 小文字の英字と数字で、まだ使われていない共有ID を作る（文字の選び方は App\Support\RandomCode）
      */
     public static function newUniqueShareId(): string
     {
-        for ($attempt = 0; $attempt < self::SHARE_ID_MAX_ATTEMPTS; $attempt++) {
-            $candidate = '';
-            for ($i = 0; $i < self::SHARE_ID_LENGTH; $i++) {
-                $candidate .= self::SHARE_ID_ALPHABET[random_int(0, strlen(self::SHARE_ID_ALPHABET) - 1)];
-            }
-
-            if (! static::query()->where('share_id', $candidate)->exists()) {
-                return $candidate;
-            }
-        }
-
-        throw new RuntimeException('共有ID を作れませんでした（重なりが続いた）。');
+        return RandomCode::unique(
+            self::SHARE_ID_LENGTH,
+            fn (string $candidate): bool => static::query()->where('share_id', $candidate)->exists(),
+            '共有ID',
+        );
     }
 }

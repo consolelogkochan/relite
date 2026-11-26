@@ -37,7 +37,12 @@ class HandleInertiaRequests extends Middleware
     {
         return [
             ...parent::share($request),
-            //
+            // 画面に渡す利用者の情報は、表示の名前だけにする（ログインID・パスワードのハッシュなどは渡さない）
+            'auth' => [
+                'user' => fn () => $request->user() === null ? null : [
+                    'name' => $request->user()->name,
+                ],
+            ],
         ];
     }
 }

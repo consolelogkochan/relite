@@ -19,5 +19,7 @@ class DatabaseSeeder extends Seeder
             'name' => 'Test User',
             'login_id' => 'testuser',
         ]);
+
+        $this->call(InvitationCodeSeeder::class);
     }
 }
