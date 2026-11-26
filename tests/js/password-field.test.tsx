@@ -42,6 +42,18 @@ test('目のボタンを押すと見え、もう一度押すと隠れる', () =>
     expect(input.type).toBe('password');
 });
 
+test('目の絵は今の状態を表す（隠れているときは閉じた目、見えているときは開いた目）', () => {
+    renderField();
+    const button = screen.getByRole('button');
+    const icon = () => button.querySelector('svg')?.getAttribute('data-icon');
+
+    expect(icon()).toBe('eye-off');
+    fireEvent.click(button);
+    expect(icon()).toBe('eye');
+    fireEvent.click(button);
+    expect(icon()).toBe('eye-off');
+});
+
 test('目のボタンを押しても、フォームは送られない', () => {
     const { onSubmit } = renderField();
 

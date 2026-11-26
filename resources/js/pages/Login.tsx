@@ -65,6 +65,11 @@ export default function Login() {
                     登録
                 </Link>
             </p>
+            <p className="text-sm">
+                <Link href="/" className="underline">
+                    トップへ戻る
+                </Link>
+            </p>
         </main>
     );
 }

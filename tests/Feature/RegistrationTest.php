@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\InvitationCode;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -184,5 +185,43 @@ class RegistrationTest extends TestCase
 
         $this->post('/register', $input)->assertTooManyRequests();
         $this->assertSame(0, User::query()->count());
+    }
+
+    public function test_a_used_invitation_code_error_comes_with_the_other_errors(): void
+    {
+        $invitation = InvitationCode::factory()->used()->create();
+
+        $this->post('/register', [...$this->validInput($invitation), 'login_id' => 'ab'])
+            ->assertSessionHasErrors([
+                'invitation_code' => 'この招待コードは使えません。',
+                'login_id' => 'ログインIDは3文字以上で入れてください。',
+            ]);
+    }
+
+    public function test_an_unknown_invitation_code_error_comes_with_the_other_errors(): void
+    {
+        $this->post('/register', [
+            ...$this->validInput(InvitationCode::factory()->make()),
+            'invitation_code' => 'nosuchcode00',
+            'login_id' => 'ab',
+        ])->assertSessionHasErrors([
+            'invitation_code' => 'この招待コードは使えません。',
+            'login_id' => 'ログインIDは3文字以上で入れてください。',
+        ]);
+    }
+
+    public function test_the_transaction_refuses_a_code_used_right_after_validation(): void
+    {
+        $invitation = InvitationCode::factory()->create();
+        // 入力の確かめが通った直後に、別の登録が同じコードを使った場合を作る（最後の関所を見る）
+        $this->app->afterResolving(RegisterRequest::class, function () use ($invitation): void {
+            $invitation->forceFill(['used_at' => now()])->save();
+        });
+
+        $this->post('/register', $this->validInput($invitation))
+            ->assertSessionHasErrors(['invitation_code' => 'この招待コードは使えません。']);
+
+        $this->assertSame(0, User::query()->count());
+        $this->assertGuest();
     }
 }

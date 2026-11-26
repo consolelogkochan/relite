@@ -85,6 +85,11 @@ export default function Register() {
                     ログイン
                 </Link>
             </p>
+            <p className="text-sm">
+                <Link href="/" className="underline">
+                    トップへ戻る
+                </Link>
+            </p>
         </main>
     );
 }

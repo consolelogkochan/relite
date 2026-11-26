@@ -11,6 +11,8 @@ type PasswordFieldProps = Omit<InputHTMLAttributes<HTMLInputElement>, 'type'> & 
 
 /**
  * 目のボタンで見せるか隠すかを切り替えられるパスワードの欄（ラベル・入力欄・誤りの文の形は Field と同じ）。
+ * 目の絵は今の状態を表す（見えているときは開いた目、隠れているときは閉じた目）。
+ * 読み上げの名前は、押すと何が起きるかを伝える（「パスワードを表示」「パスワードを隠す」）。
  * ボタンは type="button" なので、押してもフォームは送られない
  */
 export function PasswordField({ id, label, error, ...input }: PasswordFieldProps) {
@@ -38,9 +40,9 @@ export function PasswordField({ id, label, error, ...input }: PasswordFieldProps
                     className="absolute inset-y-0 right-0 flex items-center px-3 text-gray-500"
                 >
                     {visible ? (
-                        <EyeOff aria-hidden="true" className="size-4" />
+                        <Eye aria-hidden="true" data-icon="eye" className="size-4" />
                     ) : (
-                        <Eye aria-hidden="true" className="size-4" />
+                        <EyeOff aria-hidden="true" data-icon="eye-off" className="size-4" />
                     )}
                 </button>
             </div>

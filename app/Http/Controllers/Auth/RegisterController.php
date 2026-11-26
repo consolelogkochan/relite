@@ -30,7 +30,8 @@ class RegisterController extends Controller
     {
         $user = DB::transaction(function () use ($request): User {
             // 招待コードは「すでにある行」なので、鍵を掛けて読み直す。
-            // 同じコードで同時に登録しようとした2人目は、1人目の確定を待ってから used_at を見る
+            // 同じコードで同時に登録しようとした2人目は、1人目の確定を待ってから used_at を見る。
+            // 使えないコードはふつう RegisterRequest で断る。ここは同時に使われたときの最後の関所（二重に守る）
             $invitation = InvitationCode::query()
                 ->where('code', $request->string('invitation_code')->toString())
                 ->lockForUpdate()
