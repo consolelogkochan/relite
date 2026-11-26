@@ -2,6 +2,7 @@ import { Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 
 import { Field } from '@/components/field';
+import { PasswordField } from '@/components/password-field';
 import { Button } from '@/components/ui/button';
 import { submitOnEnter } from '@/lib/ime';
 
@@ -58,19 +59,17 @@ export default function Register() {
                     onChange={(event) => setData('name', event.target.value)}
                     error={errors.name}
                 />
-                <Field
+                <PasswordField
                     id="password"
                     label="パスワード（8文字以上）"
-                    type="password"
                     autoComplete="new-password"
                     value={data.password}
                     onChange={(event) => setData('password', event.target.value)}
                     error={errors.password}
                 />
-                <Field
+                <PasswordField
                     id="password_confirmation"
                     label="パスワード（確認）"
-                    type="password"
                     autoComplete="new-password"
                     value={data.password_confirmation}
                     onChange={(event) => setData('password_confirmation', event.target.value)}

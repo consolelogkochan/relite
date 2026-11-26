@@ -2,6 +2,7 @@ import { Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
 
 import { Field } from '@/components/field';
+import { PasswordField } from '@/components/password-field';
 import { Button } from '@/components/ui/button';
 import { submitOnEnter } from '@/lib/ime';
 
@@ -37,10 +38,9 @@ export default function Login() {
                     onChange={(event) => setData('login_id', event.target.value)}
                     error={errors.login_id}
                 />
-                <Field
+                <PasswordField
                     id="password"
                     label="パスワード"
-                    type="password"
                     autoComplete="current-password"
                     value={data.password}
                     onChange={(event) => setData('password', event.target.value)}

@@ -67,6 +67,7 @@ class RegistrationTest extends TestCase
             'ログインID が短い' => [['login_id' => 'ab'], 'login_id', 'ログインIDは3文字以上で入れてください。'],
             'ログインID が長い' => [['login_id' => str_repeat('a', 31)], 'login_id', 'ログインIDは30文字以内で入れてください。'],
             '表示の名前が空' => [['name' => '   '], 'name', '表示の名前を入れてください。'],
+            '表示の名前が全角の空白だけ' => [['name' => '　　'], 'name', '表示の名前を入れてください。'],
             '表示の名前が長い' => [['name' => str_repeat('あ', 51)], 'name', '表示の名前は50文字以内で入れてください。'],
             'パスワードが一致しない' => [['password_confirmation' => 'other-horse'], 'password', 'パスワードが確認の欄と一致しません。'],
             'パスワードが短い' => [['password' => 'short', 'password_confirmation' => 'short'], 'password', 'パスワードは8文字以上で入れてください。'],
@@ -159,5 +160,29 @@ class RegistrationTest extends TestCase
             ->assertSessionHasErrors(['login_id' => 'このログインIDはもう使われています。']);
 
         $this->assertNull($invitation->fresh()?->used_at);
+    }
+
+    public function test_the_name_loses_full_width_spaces_at_both_ends(): void
+    {
+        $invitation = InvitationCode::factory()->create();
+
+        $this->post('/register', [...$this->validInput($invitation), 'name' => '　太郎　'])
+            ->assertRedirect('/dashboard');
+
+        $this->assertSame('太郎', User::query()->sole()->name);
+    }
+
+    public function test_the_seventh_registration_attempt_in_a_minute_is_refused(): void
+    {
+        $invitation = InvitationCode::factory()->create();
+        // 断られる入力（ログインID が短い）で送り、利用者を作らずに回数だけを重ねる
+        $input = [...$this->validInput($invitation), 'login_id' => 'ab'];
+
+        for ($attempt = 1; $attempt <= 6; $attempt++) {
+            $this->post('/register', $input)->assertSessionHasErrors('login_id');
+        }
+
+        $this->post('/register', $input)->assertTooManyRequests();
+        $this->assertSame(0, User::query()->count());
     }
 }
