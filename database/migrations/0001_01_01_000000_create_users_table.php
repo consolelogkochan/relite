@@ -20,6 +20,8 @@ return new class extends Migration
             // 人に教える値。アプリが作り（App\Models\User）、作り直せる
             $table->string('share_id', 12)->unique();
             $table->string('password');
+            // 回復コードのハッシュ（App\Support\RecoveryCode）。そのままの値は保存しない。空なら回復コードが無い
+            $table->string('recovery_code_hash')->nullable();
             $table->boolean('is_admin')->default(false);
             // 空なら本物の利用者、値があればゲストで、その日時に消える（7-1 で期限の過ぎたゲストを探す）
             $table->timestamp('guest_expires_at')->nullable()->index();

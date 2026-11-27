@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\ViewErrorBag;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -126,5 +127,29 @@ class LoginTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('Welcome')
                 ->where('auth.user', null));
+    }
+
+    public function test_an_unknown_login_id_still_runs_one_hash_check(): void
+    {
+        Hash::partialMock()->shouldReceive('check')->once()->andReturnFalse();
+
+        $this->post('/login', ['login_id' => 'nobody', 'password' => 'correct-horse'])
+            ->assertSessionHasErrors('login_id');
+    }
+
+    public function test_twenty_failures_from_one_ip_refuse_other_login_ids(): void
+    {
+        $this->makeUser();
+
+        for ($i = 0; $i < 20; $i++) {
+            $this->post('/login', ['login_id' => 'nobody'.$i, 'password' => 'wrong-horse']);
+        }
+
+        $this->post('/login', ['login_id' => 'taro', 'password' => 'correct-horse'])
+            ->assertSessionHasErrors('login_id');
+        $errors = session('errors');
+        $this->assertInstanceOf(ViewErrorBag::class, $errors);
+        $this->assertMatchesRegularExpression('/\Aログインの失敗が続きました。/u', (string) $errors->first('login_id'));
+        $this->assertGuest();
     }
 }

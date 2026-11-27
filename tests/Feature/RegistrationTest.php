@@ -46,7 +46,7 @@ class RegistrationTest extends TestCase
             'login_id' => 'TaRo_01',
         ]);
 
-        $response->assertRedirect('/dashboard');
+        $response->assertRedirect('/recovery-code');
         $user = User::query()->sole();
         $this->assertSame('taro_01', $user->login_id);
         $this->assertSame('太郎', $user->name);
@@ -168,7 +168,7 @@ class RegistrationTest extends TestCase
         $invitation = InvitationCode::factory()->create();
 
         $this->post('/register', [...$this->validInput($invitation), 'name' => '　太郎　'])
-            ->assertRedirect('/dashboard');
+            ->assertRedirect('/recovery-code');
 
         $this->assertSame('太郎', User::query()->sole()->name);
     }

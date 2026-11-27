@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Models\InvitationCode;
 use App\Models\User;
+use App\Support\RecoveryCode;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Auth;
@@ -22,13 +23,19 @@ class RegisterController extends Controller
     }
 
     /**
-     * 利用者を作ることと招待コードを使用済みにすることを、1つのトランザクションで行う
+     * 利用者を作ることと招待コードを使用済みにすることを、1つのトランザクションで行う。
+     * 回復コードはトランザクションの前に作り、中ではハッシュだけを保存する。そのままの値は、確定した後に
+     * Inertia::flash で回復コードの画面にだけ渡す（次の1回の応答で消える）
      *
      * @throws ValidationException
      */
     public function store(RegisterRequest $request): RedirectResponse
     {
-        $user = DB::transaction(function () use ($request): User {
+        // そのままの値はこの変数の中にあるだけで、保存するのはハッシュだけ（トランザクションの中）。
+        // トランザクションが失敗すれば flash まで進まないので、どこにも残らない
+        $recoveryCode = RecoveryCode::generate();
+
+        $user = DB::transaction(function () use ($request, $recoveryCode): User {
             // 招待コードは「すでにある行」なので、鍵を掛けて読み直す。
             // 同じコードで同時に登録しようとした2人目は、1人目の確定を待ってから used_at を見る。
             // 使えないコードはふつう RegisterRequest で断る。ここは同時に使われたときの最後の関所（二重に守る）
@@ -44,11 +51,14 @@ class RegisterController extends Controller
             }
 
             try {
-                $user = User::create([
+                $user = new User([
                     'name' => $request->string('name')->toString(),
                     'login_id' => $request->string('login_id')->toString(),
                     'password' => $request->string('password')->toString(),
                 ]);
+                // まとめて書き込める列（Fillable）には入れず、ここでだけ書く
+                $user->recovery_code_hash = RecoveryCode::hash($recoveryCode);
+                $user->save();
             } catch (UniqueConstraintViolationException $e) {
                 // 入力の確かめの後、ほぼ同時の登録で同じログインID が先に入ったとき
                 if (str_contains($e->getMessage(), 'users_login_id_unique')) {
@@ -70,6 +80,8 @@ class RegisterController extends Controller
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->route('dashboard');
+        Inertia::flash('recoveryCode', RecoveryCode::format($recoveryCode));
+
+        return redirect()->route('recovery-code');
     }
 }

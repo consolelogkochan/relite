@@ -31,6 +31,7 @@ return [
         'login_id' => 'ログインID',
         'password' => 'パスワード',
         'invitation_code' => '招待コード',
+        'recovery_code' => '回復コード',
         'remember' => 'ログインしたままにする',
     ],
 ];

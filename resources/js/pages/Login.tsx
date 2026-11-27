@@ -6,7 +6,11 @@ import { PasswordField } from '@/components/password-field';
 import { Button } from '@/components/ui/button';
 import { submitOnEnter } from '@/lib/ime';
 
-export default function Login() {
+type LoginProps = {
+    status: string | null;
+};
+
+export default function Login({ status }: LoginProps) {
     const { data, setData, post, processing, errors } = useForm({
         login_id: '',
         password: '',
@@ -25,6 +29,7 @@ export default function Login() {
     return (
         <main className="mx-auto flex min-h-screen max-w-sm flex-col justify-center gap-6 px-4">
             <h1 className="text-2xl font-semibold">ログイン</h1>
+            {status !== null && <p className="text-sm text-green-700">{status}</p>}
             <form
                 onSubmit={onSubmit}
                 onKeyDown={(event) => submitOnEnter(event, submit)}
@@ -59,6 +64,11 @@ export default function Login() {
                     ログイン
                 </Button>
             </form>
+            <p className="text-sm">
+                <Link href="/password/reset" className="underline">
+                    パスワードを忘れたとき
+                </Link>
+            </p>
             <p className="text-sm">
                 アカウントが無い人は{' '}
                 <Link href="/register" className="underline">

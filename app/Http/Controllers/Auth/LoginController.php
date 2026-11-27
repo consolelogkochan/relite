@@ -13,9 +13,14 @@ use Inertia\Response;
 
 class LoginController extends Controller
 {
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('Login');
+        // 再設定の後の知らせ（RecoveryCodeController が入れる）
+        $status = $request->session()->get('status');
+
+        return Inertia::render('Login', [
+            'status' => is_string($status) ? $status : null,
+        ]);
     }
 
     /**

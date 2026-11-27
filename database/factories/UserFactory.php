@@ -3,6 +3,7 @@
 namespace Database\Factories;
 
 use App\Models\User;
+use App\Support\RecoveryCode;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -32,6 +33,16 @@ class UserFactory extends Factory
             'password' => static::$password ??= Hash::make('password'),
             'remember_token' => Str::random(10),
         ];
+    }
+
+    /**
+     * 回復コードを持つ（そのままの値 $code のハッシュが入る）
+     */
+    public function withRecoveryCode(string $code): static
+    {
+        return $this->state(fn (array $attributes) => [
+            'recovery_code_hash' => RecoveryCode::hash($code),
+        ]);
     }
 
     /**

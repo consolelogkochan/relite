@@ -2,17 +2,16 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Models\User;
+use App\Support\FailureLimiter;
+use App\Support\SecretCheck;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
 class LoginRequest extends FormRequest
 {
-    /** 失敗を数える上限（これを超えると、待つまで断る） */
-    public const MAX_ATTEMPTS = 5;
-
     public function authorize(): bool
     {
         return true;
@@ -40,51 +39,47 @@ class LoginRequest extends FormRequest
     }
 
     /**
-     * ログインID とパスワードで認証する。失敗の表示は、ログインID が無いときとパスワードが違うときで同じにする
+     * ログインID とパスワードで認証する。失敗の表示は、ログインID が無いときとパスワードが違うときで同じにする。
+     * かかる時間も同じにする（ログインID が無いときも照合を1回行い、失敗は決まった時間まで待つ。App\Support\SecretCheck）。
+     * Auth::attempt は、ログインID が無いと照合を飛ばし、時間を Timebox（200ミリ秒）だけでそろえる。
+     * ハッシュの計算がそれより長いサーバーでは差が出るので、自分で照らしてから Auth::login する
      *
      * @throws ValidationException
      */
     public function authenticate(): void
     {
-        $this->ensureIsNotRateLimited();
+        $limiter = $this->limiter();
+        $limiter->ensureNotLimited('login_id', 'auth.throttle');
 
-        $credentials = [
-            'login_id' => $this->string('login_id')->toString(),
-            'password' => $this->string('password')->toString(),
-        ];
+        $loginId = $this->string('login_id')->toString();
+        $password = $this->string('password')->toString();
 
-        if (! Auth::attempt($credentials, $this->boolean('remember'))) {
-            RateLimiter::hit($this->throttleKey());
+        $user = SecretCheck::withinTimebox(function () use ($loginId, $password): ?User {
+            $user = User::query()->where('login_id', $loginId)->first();
+
+            return SecretCheck::matches($password, $user?->password) ? $user : null;
+        });
+
+        if ($user === null) {
+            $limiter->hit();
 
             throw ValidationException::withMessages([
                 'login_id' => __('auth.failed'),
             ]);
         }
 
-        RateLimiter::clear($this->throttleKey());
+        // Auth::attempt と同じく、ハッシュの設定が変わっていれば作り直す
+        Auth::getProvider()->rehashPasswordIfRequired($user, ['password' => $password]);
+        Auth::login($user, $this->boolean('remember'));
+
+        $limiter->clear();
     }
 
     /**
-     * @throws ValidationException
+     * 失敗の数え（ログインID｜IP で5回、IP だけで20回。どちらも1分）
      */
-    private function ensureIsNotRateLimited(): void
+    private function limiter(): FailureLimiter
     {
-        if (! RateLimiter::tooManyAttempts($this->throttleKey(), self::MAX_ATTEMPTS)) {
-            return;
-        }
-
-        throw ValidationException::withMessages([
-            'login_id' => __('auth.throttle', [
-                'seconds' => RateLimiter::availableIn($this->throttleKey()),
-            ]),
-        ]);
-    }
-
-    /**
-     * 失敗を数えるキー（ログインID｜IP）
-     */
-    private function throttleKey(): string
-    {
-        return $this->string('login_id')->toString().'|'.$this->ip();
+        return new FailureLimiter('login', $this->string('login_id')->toString(), (string) $this->ip());
     }
 }
